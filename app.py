@@ -1,13 +1,10 @@
-from flask import Flask, session, jsonify, request
+from flask import Flask, session, jsonify, request,render_template
 import pandas as pd
 import numpy as np
-import pickle
-import create_prediction_model
-import diagnosis 
-import predict_exited_from_saved_model
+import diagnostics 
 import json
 import os
-
+from scoring import score_model
 
 
 ######################Set up variables for use in our script
@@ -21,30 +18,38 @@ dataset_csv_path = os.path.join(config['output_folder_path'])
 
 prediction_model = None
 
+@app.route("/",methods=['GET'])
+def home():
+    return render_template("index.html")
 
 #######################Prediction Endpoint
 @app.route("/prediction", methods=['POST','OPTIONS'])
 def predict():        
     #call the prediction function you created in Step 3
-    return #add return value for prediction outputs
+    datapath = request.json.get('dataset_path')
+    y_pred, _ = diagnostics.model_predictions(datapath)
+    return str(y_pred)
 
 #######################Scoring Endpoint
 @app.route("/scoring", methods=['GET','OPTIONS'])
-def stats():        
-    #check the score of the deployed model
-    return #add return value (a single F1 score number)
-
+def score():        
+    #check the score of the deployed mode
+    score = score_model()
+    return str(score)
 #######################Summary Statistics Endpoint
 @app.route("/summarystats", methods=['GET','OPTIONS'])
-def stats():        
-    #check means, medians, and modes for each column
-    return #return a list of all calculated summary statistics
-
+def summary():        
+    #check means, medians, and modes for each col
+    summary = diagnostics.dataframe_summary()
+    return str(summary)
 #######################Diagnostics Endpoint
 @app.route("/diagnostics", methods=['GET','OPTIONS'])
 def stats():        
     #check timing and percent NA values
-    return #add return value for all diagnostics
-
+    
+    et = diagnostics.execution_time()
+    md = diagnostics.missing_data()
+    op = diagnostics.outdated_packages_list()     
+    return str("execution_time:" + et + "\nmissing_data;"+ md + "\noutdated_packages:" + op)
 if __name__ == "__main__":    
     app.run(host='0.0.0.0', port=8000, debug=True, threaded=True)
